@@ -1,0 +1,167 @@
+#!/bin/sh
+set -u
+set -f
+
+Echo() {
+	printf '%s\n' "$*"
+}
+
+Info() {
+	Echo "${0##*/}: $*"
+}
+
+Die() {
+	Echo "${0##*/}: $*" >&2
+	exit 1
+}
+
+Warn() {
+	Echo "${0##*/}: warning: $*" >&2
+}
+
+Version() {
+	Echo 'paxopen 1.0'
+	exit
+}
+
+Usage() {
+	Echo "Usage: ${0##*/} [options] close|open|show|help
+Set pax_softmode and randomize_va_space to close (safe) or open (unsafe) state
+or show the current states.
+options:
+-s  Only show/set pax_softmode
+-r  Only show/set randomize
+-f  force setting even if this was the previous status
+--  last option"
+	exit ${1:-1}
+}
+
+ToSysCtl() {
+	$sysctl || {
+		eval $1=\$2
+		return
+	}
+	a=${2#/*/*/}
+	b=
+	while [ -n "$a" ]
+	do
+		b=$b${a%%/*}
+		case $a in
+		*/*)
+			a=${a#*/}
+			b=$b'.'
+			continue;;
+		esac
+		break
+	done
+	eval $1=\$b
+}
+
+IsFileValue() {
+	if $sysctl
+	then	a=`sysctl -n -b "$1"
+printf x` && a=${a%x}
+	else	read -r a <"$1"
+	fi || a=unknown
+	[ $# -ge 2 ] || return 0
+	eval $2=\$a
+	[ $# -ge 3 ] || return 0
+	case $a in
+	$3)
+		return 0;;
+	esac
+	return 1
+}
+
+ShowFileValue() {
+	if IsFileValue "$1" value "$2"
+	then	Info "${1##*/} is $value (safe)"
+	else	Info "${1##*/} is $value (dangerous!)"
+	fi
+}
+
+SetFileValue() {
+	if $forceflag
+	then	Info "setting ${1##*/} to $2 ($3)"
+	elif IsFileValue "$1" "$2"
+	then	Info "${1##*/} was already $2 ($3)"
+		return
+	else	Info "switching ${1##*/} to $2 ($3)"
+	fi
+	if $sysctl
+	then	sysctl -q -w "$1=$2"
+	else	printf '%s' "$2" >"$1"
+	fi || Die "failed to set ${1##*/}=$2"
+}
+
+Show() {
+	if $dosoft
+	then	ShowFileValue "$softmode" 0
+	fi
+	if $dorandom
+	then	ShowFileValue "$randomize" 2
+	fi
+}
+
+Open() {
+	if $dosoft
+	then	SetFileValue "$softmode" 1 'dangerous!'
+	fi
+	if $dorandom
+	then	SetFileValue "$randomize" 0 'dangerous!'
+	fi
+}
+
+Close() {
+	if $dosoft
+	then	SetFileValue "$softmode" 0 'safe'
+	fi
+	if $dorandom
+	then	SetFileValue "$randomize" 2 'safe'
+	fi
+}
+
+sysctl=
+forceflag=false
+dosoft=:
+dorandom=:
+OPTIND=1
+while getopts 'fsrSVhH' opt
+do	case $opt in
+	f)	forceflag=:;;
+	s)	dorandom=false
+		dosoft=:;;
+	r)	dorandom=:
+		dosoft=false;;
+	S)	sysctl=false;;
+	V)	Version;;
+	'?')	exit 1;;
+	*)	Usage 0;;
+	esac
+done
+shift $(( $OPTIND - 1 ))
+
+if [ -z "$sysctl" ]
+then	sysctl=false
+	command -v sysctl >/dev/null 2>&1 && sysctl=:
+fi
+softmodefile='/proc/sys/kernel/pax/softmode'
+randomizefile='/proc/sys/kernel/randomize_va_space'
+ToSysCtl softmode "$softmodefile"
+ToSysCtl randomize "$randomizefile"
+
+test -r "$softmodefile" || Warn "$softmodefile not accessible"
+test -r "$randomizefile" || Warn "$randomizefile not accessible"
+
+case ${1-} in
+open)
+	Open;;
+close)
+	Close;;
+show|print)
+	Show;;
+help)
+	Usage 0;;
+*)
+	Usage;;
+esac

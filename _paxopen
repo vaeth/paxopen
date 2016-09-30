@@ -1,0 +1,25 @@
+#compdef paxopen
+local curcontext="$curcontext" state state_descr line
+typeset -A opt_args
+_arguments -C -s -S -A '-*' : \
+'(1 -)'{'-h','-H'}'[help]' \
+'(1 -)-V[print version]' \
+'-s[only show/set pax_softmode]' \
+'-r[only show/set randomize]' \
+'-f[force setting even if this was the previous status]' \
+'-S[do not use sysctl]' \
+'1:command:->cmd'
+local ret=$?
+case $state in
+(cmd)
+	local cmds
+	cmds=(
+	'close:set to close (unsafe) state'
+	'open:set to open (safe) state'
+	'show:show current state'
+	'help:print help'
+	)
+	_describe -t commands 'command' cmds
+esac
+return ret
+
