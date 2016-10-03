@@ -20,7 +20,7 @@ Warn() {
 }
 
 Version() {
-	Echo 'paxopen 1.0'
+	Echo 'paxopen 1.1'
 	exit
 }
 
@@ -64,7 +64,12 @@ printf x` && a=${a%x}
 	else	read -r a <"$1"
 	fi || a=unknown
 	[ $# -ge 2 ] || return 0
-	eval $2=\$a
+	case ${2:-/} in
+	*[!01234567890_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]*)
+		:;;
+	[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]*)
+		eval $2=\$a;;
+	esac
 	[ $# -ge 3 ] || return 0
 	case $a in
 	$3)
@@ -83,7 +88,7 @@ ShowFileValue() {
 SetFileValue() {
 	if $forceflag
 	then	Info "setting ${1##*/} to $2 ($3)"
-	elif IsFileValue "$1" "$2"
+	elif IsFileValue "$1" - "$2"
 	then	Info "${1##*/} was already $2 ($3)"
 		return
 	else	Info "switching ${1##*/} to $2 ($3)"
