@@ -20,7 +20,7 @@ Warn() {
 }
 
 Version() {
-	Echo 'paxopen 1.1'
+	Echo 'paxopen 1.2'
 	exit
 }
 

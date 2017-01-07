@@ -19,7 +19,7 @@ case $state in
 	'show:show current state'
 	'help:print help'
 	)
-	_describe -t commands 'command' cmds
+	_describe -t commands 'command' cmds && ret=0;;
 esac
 return ret
 

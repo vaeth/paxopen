@@ -3,7 +3,7 @@ The license of this package is the GNU Public License GPL-2.
 
 A wrapper script to set PAX kernel variables to an insecure/safe state
 
-To install this script, just copy paxopen into root's $PATH.
-To obtain support for zsh completion, copy _paxopen to zsh's $fpath.
+To install this script, just copy bin/* into root's $PATH.
+To obtain support for zsh completion, copy zsh/* to zsh's $fpath.
 
 For Gentoo, there is an ebuild in the mv overlay.
